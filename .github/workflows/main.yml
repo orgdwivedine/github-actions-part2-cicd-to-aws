@@ -1,71 +1,147 @@
-#---------------------------------------------------------------------
-# GitHub Action Workflow to Deploy Flask App to AWS ElasticBeanstalk
-#
-# Version      Date        Info
-# 1.0          2019        Initial Version
-#
-# Made by Denis Astahov ADV-IT Copyleft (c) 2019
-#---------------------------------------------------------------------
-name: CI-CD-Pipeline-to-AWS-ElasticBeanstalk
-env:
-  EB_PACKAGE_S3_BUCKET_NAME : "zzz.flask-app"
-  EB_APPLICATION_NAME       : "MyFlask"
-  EB_ENVIRONMENT_NAME       : "MyFlask-env"
-  DEPLOY_PACKAGE_NAME       : "flask-app-${{ github.sha }}.zip"
-  AWS_REGION_NAME           : "us-west-2"
+# This is a basic workflow to help you get started with Actions
 
-on: 
+
+
+
+name: CI
+
+env:
+
+  BUCKET_NAME : "neha-bucket123"
+
+  APP_NAME : "neha-app"
+
+  ENV_NAME : "Nehaapp-env"
+
+  PACKAGE_NAME : "neha-${{ github.sha }}.zip"
+
+  AWS_REGION : "us-east-2"
+
+
+
+
+# Controls when the action will run. 
+
+on:
+
+  # Triggers the workflow on push or pull request events but only for the master branch
+
   push:
-    branches: 
-      - master
+
+    branches: [ master ]
+
+
+
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 
 jobs:
-    my_ci_pipeline:
-       runs-on: ubuntu-latest
-       
-       steps:
-         - name: Git clone our repository
-           uses: actions/checkout@v1
-            
-         - name: Create ZIP deployment package
-           run : zip -r ${{ env.DEPLOY_PACKAGE_NAME }} ./  -x  *.git*
-           
-         - name: Configure my AWS Credentils
-           uses: aws-actions/configure-aws-credentials@v1
-           with:
-             aws-access-key-id    : ${{ secrets.MY_AWS_ACCESS_KEY }}
-             aws-secret-access-key: ${{ secrets.MY_AWS_SECRET_KEY }}
-             aws-region           : ${{ env.AWS_REGION_NAME }}
 
-         - name: Copy our Deployment package to S3 bucket
-           run : aws s3 cp ${{ env.DEPLOY_PACKAGE_NAME }} s3://${{ env.EB_PACKAGE_S3_BUCKET_NAME}}/
-         
-         - name: Print nice message on completion of CI Pipeline
-           run : echo "CI Pipeline part finished successfully"
-           
-    my_cd_pipeline:
-       runs-on: ubuntu-latest
-       needs: [my_ci_pipeline]
-       
-       steps:
-         - name: Configure my AWS Credentils
-           uses: aws-actions/configure-aws-credentials@v1
-           with:
-             aws-access-key-id    : ${{ secrets.MY_AWS_ACCESS_KEY }}
-             aws-secret-access-key: ${{ secrets.MY_AWS_SECRET_KEY }}
-             aws-region           : ${{ env.AWS_REGION_NAME }}
-         
-         - name: Create new ElasticBeanstalk Applicaiton Version
-           run : |
+  # This workflow contains a single job called "build"
+
+  my-ci-pipeline:
+
+    # The type of runner that the job will run on
+
+    runs-on: ubuntu-latest
+
+
+
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+
+    steps:
+
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+
+      - uses: actions/checkout@v2
+
+
+
+
+      # Runs a single command using the runners shell
+
+      - name: Create zip
+
+        run: zip -r ${{ env.PACKAGE_NAME }} ./ -x "*.git"
+
+
+
+
+      # Runs a set of commands using the runners shell
+
+      - name: configure aws credentials
+
+        uses: aws-actions/configure-aws-credentials@v1
+
+        with:
+
+          aws-access-key-id: ${{ secrets.MY_AWS_ACCESS_KEY }}
+
+          aws-secret-access-key: ${{ secrets.MY_AWS_ACCESS_SECRET }}
+
+          aws-region: ${{ env.AWS_REGION }}
+
+          
+
+      - name:  Copy package to s3
+
+        run: aws s3 cp ${{ env.PACKAGE_NAME }} s3://${{ env.BUCKET_NAME }}/
+
+        
+
+      - name: completion message
+
+        run: echo "CI completed successfully"
+
+
+
+
+  my-cd-pipeline:
+
+    runs-on: ubuntu-latest
+
+
+
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+
+    steps:
+
+      - name: configure aws credentials
+
+        uses: aws-actions/configure-aws-credentials@v1
+
+        with:
+
+          aws-access-key-id: ${{ secrets.MY_AWS_ACCESS_KEY }}
+
+          aws-secret-access-key: ${{ secrets.MY_AWS_ACCESS_SECRET }}
+
+          aws-region: ${{ env.AWS_REGION }}
+
+          
+
+      - name: Create new ElasticBeanstalk Applicaiton Version
+
+        run : |
+
             aws elasticbeanstalk create-application-version \
-            --application-name ${{ env.EB_APPLICATION_NAME }} \
-            --source-bundle S3Bucket="${{ env.EB_PACKAGE_S3_BUCKET_NAME }}",S3Key="${{ env.DEPLOY_PACKAGE_NAME }}" \
+
+            --application-name ${{ env.APP_NAME }} \
+
+            --source-bundle S3Bucket="${{ env.BUCKET_NAME }}",S3Key="${{ env.PACKAGE_NAME }}" \
+
             --version-label "Ver-${{ github.sha }}" \
+
             --description "CommitSHA-${{ github.sha }}"
 
-         - name: Deploy our new Application Version
-           run : aws elasticbeanstalk update-environment --environment-name ${{ env.EB_ENVIRONMENT_NAME }} --version-label "Ver-${{ github.sha }}"
+      - name: Deploy our new Application Version
+
+        run : aws elasticbeanstalk update-environment --environment-name ${{ env.ENV_NAME }} --version-label "Ver-${{ github.sha }}"
+
            
-         - name: Print nice message on completion of CD Pipeline
-           run : echo "CD Pipeline part finished successfully"  
-        
+
+      - name: Print nice message on completion of CD Pipeline
+
+        run : echo "CD Pipeline part finished successfully"  
